@@ -7,5 +7,5 @@ pool:
 steps:
 - checkout: self
 
-- script: echo "Pipeline working!"
+- script: echo "HELLO FROM MAIN BRANCH"
   displayName: 'Test'
