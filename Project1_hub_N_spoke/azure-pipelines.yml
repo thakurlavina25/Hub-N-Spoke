@@ -5,5 +5,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
+- checkout: self
+
 - script: echo "Pipeline working!"
   displayName: 'Test'
