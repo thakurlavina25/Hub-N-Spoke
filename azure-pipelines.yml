@@ -1,0 +1,67 @@
+trigger:
+- main
+
+variables:
+  terraformVersion: '1.5.0'
+
+stages:
+
+# 🔹 Stage 1: Terraform Init & Plan
+- stage: Terraform_Plan
+  displayName: "Terraform Plan Stage"
+  jobs:
+  - job: Plan
+    displayName: "Run Terraform Plan"
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    - script: terraform init
+      displayName: "Terraform Init"
+
+    - script: terraform validate
+      displayName: "Terraform Validate"
+
+    - script: terraform plan -out=tfplan
+      displayName: "Terraform Plan"
+
+    # Save plan as artifact
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: 'tfplan'
+        artifactName: 'terraform-plan'
+        publishLocation: 'Container'
+
+
+# 🔹 Stage 2: Manual Approval + Apply
+- stage: Terraform_Apply
+  displayName: "Terraform Apply Stage"
+  dependsOn: Terraform_Plan
+
+  jobs:
+  - deployment: Apply
+    displayName: "Manual Approval & Apply"
+    environment: terraform-approval   # 👈 You must create this in ADO
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: $(terraformVersion)
+
+          # Download artifact
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              artifactName: 'terraform-plan'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          - script: |
+              terraform init
+              terraform apply $(System.ArtifactsDirectory)/terraform-plan/tfplan
+            displayName: "Terraform Apply"
