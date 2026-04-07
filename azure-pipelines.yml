@@ -4,7 +4,7 @@ trigger:
 variables:
   terraformVersion: '1.5.0'
   azureServiceConnection: 'Hub -N-Spoke'   # 🔴 change this
-  workingDirectory: '$(System.DefaultWorkingDirectory)'
+  workingDirectory: '$(System.DefaultWorkingDirectory)/Project1_hub_N_spoke'
 
 stages:
 
