@@ -3,12 +3,15 @@ trigger:
 
 variables:
   terraformVersion: '1.5.0'
+  azureServiceConnection: 'Hub -N-Spoke'   # 🔴 change this
+  workingDirectory: '$(System.DefaultWorkingDirectory)'
 
 stages:
 
-# 🔹 Stage 1: Terraform Init & Plan
+# 🔹 Stage 1: Terraform Plan
 - stage: Terraform_Plan
   displayName: "Terraform Plan Stage"
+
   jobs:
   - job: Plan
     displayName: "Run Terraform Plan"
@@ -16,23 +19,31 @@ stages:
       vmImage: 'ubuntu-latest'
 
     steps:
+
+    # Install Terraform
     - task: TerraformInstaller@1
       inputs:
         terraformVersion: $(terraformVersion)
 
-    - script: terraform init
-      displayName: "Terraform Init"
-
-    - script: terraform validate
-      displayName: "Terraform Validate"
-
-    - script: terraform plan -out=tfplan
-      displayName: "Terraform Plan"
-
-    # Save plan as artifact
-    - task: PublishBuildArtifacts@1
+    # Azure Login + Plan
+    - task: AzureCLI@2
+      displayName: "Terraform Init, Validate & Plan"
       inputs:
-        pathToPublish: 'tfplan'
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          cd $(workingDirectory)
+
+          terraform init
+          terraform validate
+          terraform plan -out=tfplan
+
+    # Publish Plan Artifact
+    - task: PublishBuildArtifacts@1
+      displayName: "Publish Terraform Plan"
+      inputs:
+        pathToPublish: '$(workingDirectory)/tfplan'
         artifactName: 'terraform-plan'
         publishLocation: 'Container'
 
@@ -45,23 +56,33 @@ stages:
   jobs:
   - deployment: Apply
     displayName: "Manual Approval & Apply"
-    environment: terraform-approval   # 👈 You must create this in ADO
+    environment: terraform-approval   # 🔴 must exist in ADO
+
     strategy:
       runOnce:
         deploy:
           steps:
 
+          # Install Terraform
           - task: TerraformInstaller@1
             inputs:
               terraformVersion: $(terraformVersion)
 
-          # Download artifact
+          # Download Plan Artifact
           - task: DownloadBuildArtifacts@0
             inputs:
               artifactName: 'terraform-plan'
               downloadPath: '$(System.ArtifactsDirectory)'
 
-          - script: |
-              terraform init
-              terraform apply $(System.ArtifactsDirectory)/terraform-plan/tfplan
+          # Azure Login + Apply
+          - task: AzureCLI@2
             displayName: "Terraform Apply"
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                cd $(workingDirectory)
+
+                terraform init
+                terraform apply $(System.ArtifactsDirectory)/terraform-plan/tfplan -auto-approve
