@@ -3,7 +3,7 @@ trigger:
 
 variables:
   terraformVersion: '1.5.0'
-  azureServiceConnection: 'Hub -N-Spoke'   # 🔴 change this
+  azureServiceConnection: 'Hub -N-Spoke'   # 🔴 CHANGE THIS
   workingDirectory: '$(System.DefaultWorkingDirectory)/Project1_hub_N_spoke'
 
 stages:
@@ -20,12 +20,20 @@ stages:
 
     steps:
 
+    # Debug (optional but helpful)
+    - script: |
+        echo "Current Path:"
+        pwd
+        echo "Files:"
+        ls -la
+      displayName: "Debug Directory"
+
     # Install Terraform
     - task: TerraformInstaller@1
       inputs:
         terraformVersion: $(terraformVersion)
 
-    # Azure Login + Plan
+    # Terraform Init + Validate + Plan
     - task: AzureCLI@2
       displayName: "Terraform Init, Validate & Plan"
       inputs:
@@ -35,7 +43,7 @@ stages:
         inlineScript: |
           cd $(workingDirectory)
 
-          terraform init
+          terraform init -reconfigure -upgrade
           terraform validate
           terraform plan -out=tfplan
 
@@ -48,7 +56,7 @@ stages:
         publishLocation: 'Container'
 
 
-# 🔹 Stage 2: Manual Approval + Apply
+# 🔹 Stage 2: Terraform Apply (Manual Approval)
 - stage: Terraform_Apply
   displayName: "Terraform Apply Stage"
   dependsOn: Terraform_Plan
@@ -56,7 +64,7 @@ stages:
   jobs:
   - deployment: Apply
     displayName: "Manual Approval & Apply"
-    environment: terraform-approval   # 🔴 must exist in ADO
+    environment: terraform-approval   # 🔴 MUST EXIST
 
     strategy:
       runOnce:
@@ -74,7 +82,7 @@ stages:
               artifactName: 'terraform-plan'
               downloadPath: '$(System.ArtifactsDirectory)'
 
-          # Azure Login + Apply
+          # Terraform Apply
           - task: AzureCLI@2
             displayName: "Terraform Apply"
             inputs:
@@ -84,5 +92,5 @@ stages:
               inlineScript: |
                 cd $(workingDirectory)
 
-                terraform init
+                terraform init -reconfigure -upgrade
                 terraform apply $(System.ArtifactsDirectory)/terraform-plan/tfplan -auto-approve
