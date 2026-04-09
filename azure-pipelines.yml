@@ -10,20 +10,32 @@ variables:
 
 stages:
 
-# ========================
-# STAGE 1: PLAN
-# ========================
+# =========================
+# STAGE 1: TERRAFORM PLAN
+# =========================
 - stage: Terraform_Plan
   displayName: "Terraform Plan"
 
   jobs:
   - job: Plan
+    displayName: "Run Terraform Plan"
+
     steps:
 
+    # Install Terraform
     - task: TerraformInstaller@1
       inputs:
         terraformVersion: $(terraformVersion)
 
+    # Debug path
+    - script: |
+        echo "Current Directory:"
+        pwd
+        ls -la
+      displayName: "Debug Info"
+      workingDirectory: $(workingDirectory)
+
+    # Terraform Init + Plan
     - script: |
         export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
         export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
@@ -33,15 +45,22 @@ stages:
         terraform init
         terraform plan -out=tfplan
       workingDirectory: $(workingDirectory)
-      displayName: "Terraform Plan"
+      displayName: "Terraform Init & Plan"
 
-    # Save plan as artifact
+    # Show plan (readable output)
+    - script: |
+        terraform show tfplan
+      workingDirectory: $(workingDirectory)
+      displayName: "Show Terraform Plan"
+
+    # Publish plan artifact
     - publish: $(workingDirectory)/tfplan
       artifact: tfplan
 
-# ========================
-# STAGE 2: APPROVAL
-# ========================
+
+# =========================
+# STAGE 2: MANUAL APPROVAL
+# =========================
 - stage: Approval
   displayName: "Manual Approval"
   dependsOn: Terraform_Plan
@@ -49,24 +68,29 @@ stages:
   jobs:
   - job: WaitForApproval
     pool: server
+
     steps:
     - task: ManualValidation@0
       inputs:
-        instructions: "Please review Terraform plan before applying."
+        instructions: "Review Terraform plan and approve to proceed."
         onTimeout: "reject"
       timeoutInMinutes: 60
 
-# ========================
-# STAGE 3: APPLY
-# ========================
+
+# =========================
+# STAGE 3: TERRAFORM APPLY
+# =========================
 - stage: Terraform_Apply
   displayName: "Terraform Apply"
   dependsOn: Approval
 
   jobs:
   - job: Apply
+    displayName: "Apply Terraform Changes"
+
     steps:
 
+    # Install Terraform again
     - task: TerraformInstaller@1
       inputs:
         terraformVersion: $(terraformVersion)
@@ -75,13 +99,23 @@ stages:
     - download: current
       artifact: tfplan
 
+    # Debug paths
+    - script: |
+        echo "Pipeline Workspace:"
+        ls -la $(Pipeline.Workspace)
+      displayName: "Check Downloaded Files"
+
+    # Copy plan file + Apply
     - script: |
         export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
         export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
         export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
         export ARM_TENANT_ID=$(ARM_TENANT_ID)
 
+        cp $(Pipeline.Workspace)/tfplan/tfplan $(workingDirectory)/
+
+        cd $(workingDirectory)
+
         terraform init
         terraform apply -auto-approve tfplan
-      workingDirectory: $(workingDirectory)
       displayName: "Terraform Apply"
