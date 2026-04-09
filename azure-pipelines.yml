@@ -9,18 +9,21 @@ variables:
   workingDirectory: '$(System.DefaultWorkingDirectory)/Project1_hub_N_spoke'
 
 stages:
+
+# ========================
+# STAGE 1: PLAN
+# ========================
 - stage: Terraform_Plan
+  displayName: "Terraform Plan"
+
   jobs:
   - job: Plan
-
     steps:
 
-    # Install Terraform
     - task: TerraformInstaller@1
       inputs:
         terraformVersion: $(terraformVersion)
 
-    # Terraform Init + Plan with Azure Auth
     - script: |
         export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
         export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
@@ -28,6 +31,57 @@ stages:
         export ARM_TENANT_ID=$(ARM_TENANT_ID)
 
         terraform init
-        terraform plan
+        terraform plan -out=tfplan
       workingDirectory: $(workingDirectory)
-      displayName: "Terraform Init & Plan"
+      displayName: "Terraform Plan"
+
+    # Save plan as artifact
+    - publish: $(workingDirectory)/tfplan
+      artifact: tfplan
+
+# ========================
+# STAGE 2: APPROVAL
+# ========================
+- stage: Approval
+  displayName: "Manual Approval"
+  dependsOn: Terraform_Plan
+
+  jobs:
+  - job: WaitForApproval
+    pool: server
+    steps:
+    - task: ManualValidation@0
+      inputs:
+        instructions: "Please review Terraform plan before applying."
+        onTimeout: "reject"
+      timeoutInMinutes: 60
+
+# ========================
+# STAGE 3: APPLY
+# ========================
+- stage: Terraform_Apply
+  displayName: "Terraform Apply"
+  dependsOn: Approval
+
+  jobs:
+  - job: Apply
+    steps:
+
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    # Download plan artifact
+    - download: current
+      artifact: tfplan
+
+    - script: |
+        export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
+        export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
+        export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
+        export ARM_TENANT_ID=$(ARM_TENANT_ID)
+
+        terraform init
+        terraform apply -auto-approve tfplan
+      workingDirectory: $(workingDirectory)
+      displayName: "Terraform Apply"
