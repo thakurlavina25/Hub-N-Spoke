@@ -11,7 +11,7 @@ resource "azurerm_route" "default_route" {
   route_table_name       = azurerm_route_table.Spoke_rt.name
   address_prefix         = "0.0.0.0/0"
   next_hop_type          = "VirtualAppliance"
-  next_hop_in_ip_address = var.firewall_subnet_prefix[0] # Assuming the first IP in the firewall subnet is used as the next hop
+  next_hop_in_ip_address = var.firewall_private_ip # Assuming the first IP in the firewall subnet is used as the next hop
 }
 ## Associate the Route Table with the Spoke Subnet ##
 resource "azurerm_subnet_route_table_association" "rt_assoc" {

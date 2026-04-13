@@ -1,6 +1,6 @@
 # Terraform variables for Hub Network Deployment in Azure #
 Hubrgname                   = "hub-rg"
-Hubrglocation               = "Central India"
+Hubrglocation               = "EastUS"
 hub_vnet_name               = "hub-vnet"
 hub_vnet_address_space      = ["172.30.0.0/16"]
 firewall_subnet_prefix      = ["172.30.1.0/26"]
@@ -8,18 +8,18 @@ firewall_mgmt_subnet_prefix = ["172.30.2.0/26"]
 jumpbox_subnet              = "jumpbox-subnet"
 jumpbox_subnet_prefix       = ["172.30.3.0/24"]
 NIC                         = "jumpbox-nic"
-keyvaultnameHub             = "keyvault12345"
+keyvaultnameHub             = "keyvaultHub123456"
 VmName                      = "jumpbox-vm"
-vmsize                      = "Standard_DS1_v2"
+vmsize                      = "Standard_B1ms"
 username                    = "admin100"
-sku                         = "2022-Datacenter"
+sku                         = "2022-datacenter"
 Firewall_pip                 = "fw-pip"
 Hub_fw                        = "Hub-Firewall"
 
 # Terraform variables for Spoke Network Deployment in Azure #
 Spokergname     = "Spoke-rg"
 Spokerglocation = "CentralUs"
-keyvaultnameSpoke   = "keyvault123456"
+keyvaultnameSpoke   = "keyvaultSpoke123456"
 
 Spoke_Vnet = {
   Dev-vnet = {
@@ -42,13 +42,13 @@ Spoke_Subnet = {
 }
 Spoke_VM = {
   Dev-VM = {
-    size           = "Standard_DS1_v2"
+    size           = "Standard_B1s"
     admin_username = "admin100"
     sku            = "2022-Datacenter"
     nic_name = "Dev-Subnet"
   }
   Prod-VM = {
-    size           = "Standard_DS1_v2"
+    size           = "Standard_B1s"
     admin_username = "admin100"
     sku            = "2022-Datacenter"
     nic_name = "Prod-Subnet"

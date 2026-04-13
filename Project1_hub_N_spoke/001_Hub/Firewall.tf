@@ -12,7 +12,7 @@ resource "azurerm_firewall" "Hub_fw" {
   name                = var.Hub_fw
   location            = azurerm_resource_group.hub_rg.location
   resource_group_name = azurerm_resource_group.hub_rg.name
-  sku_name            = "AZFW_Hub"
+  sku_name            = "AZFW_VNet"
   sku_tier            = "Standard"
 
   ip_configuration {
@@ -29,6 +29,7 @@ resource "azurerm_firewall_network_rule_collection" "allow_outbound" {
   resource_group_name = azurerm_resource_group.hub_rg.name
   priority            = 100
   action              = "Allow"
+  depends_on = [ azurerm_firewall.Hub_fw ]
 
   rule {
     name = "allow-web"

@@ -30,6 +30,8 @@ module "Spoke" {
   Spoke_rt        = var.Spoke_rt
   default_route    = var.default_route
   firewall_subnet_prefix = var.firewall_subnet_prefix
+  firewall_private_ip = module.Hub.firewall_private_ip
+  depends_on = [ module.Hub ]
 }
 
 #  Peering (connect both)
@@ -55,5 +57,4 @@ resource "azurerm_virtual_network_peering" "Spoke-to-Hub" {
 
   allow_virtual_network_access = true
   allow_forwarded_traffic      = true
-  use_remote_gateways          = true
 }

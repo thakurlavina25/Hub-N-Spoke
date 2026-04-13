@@ -41,3 +41,6 @@ variable "default_route" {
 variable "firewall_subnet_prefix" {
   type = list(string)
 }
+variable "firewall_private_ip" {
+  type = string
+}
